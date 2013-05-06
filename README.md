@@ -8,16 +8,15 @@ The authority filter for JAVA.Based JAVA's Filter.Check the url permission is al
 
 权限检查器PermissionChecker # 由用户基于业务扩展，但必须继承类：PermissionChecker,实现check方法。
 用户继承的Checker类必须配置在Authority的init-param中，param-name 为用户扩展的permissionChecker.            
- 
- 权限数据处理器AuthorityHandler # 权限数据是有结构的。相当于一个hash.即权限组的概念。
- {
-   group1:[/webModel1.do*,/webModel2/*.do*,/webModel3.do?method=hello*]
+权限数据处理器AuthorityHandler # 权限数据是有结构的。相当于一个hash.即权限组的概念。
+{
+group1:[/webModel1.do*,/webModel2/*.do*,/webModel3.do?method=hello*]
           
-   } 
+} 
                                                  
-                      注：'*'代表任意字符。
+注：'*'代表任意字符。
                                                                     
-               权限数据的主要来源有两种：
+      权限数据的主要来源有两种：
     1.DB，从DB查出数据组装出以上hash结构。即：Map<String,Collection<String>>.
                                                                       
     2.从权限数据文件获得。
