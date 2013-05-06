@@ -13,6 +13,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,8 +26,6 @@ import org.authority.common.log.Log;
 import org.authority.common.util.CommonUtils;
 import org.authority.core.checker.PermissionChecker;
 
-import com.alibaba.fastjson.JSON;
-
 /**
  * The class <code>AuthorityHandler</code> is  for caching, processing, and checking permission.  
  * @author  Json Zou
@@ -35,7 +35,7 @@ public class AuthorityHandler {
    private static FilterConfig filterConfig;
    private static PermissionChecker checker;
    private static String contextPath;
-   private static Map<String,Collection<String>> authority=new HashMap<String,Collection<String>>();
+   private static  AuthorityHandler.AuthorityCache authorityCache= new AuthorityHandler.AuthorityCache();
    private static final String EXCLUDE="_exclude";
    private static final String EXTENSION=".authority";//authority file name extension
    private static final String CLASSPATH="WEB-INF"+File.separator+"classes/";//class path
@@ -133,11 +133,11 @@ public static Boolean check(String[] groups,String url){
 	Collection<String> authority_allow=new ArrayList<String>();
 	  if(groups!=null&&url!=null){
 		  for (String group : groups) {
-			  if(authority.get(group+EXCLUDE)!=null){
-				  authority_exclude.addAll(authority.get(group+EXCLUDE));
+			  if(authorityCache.get(group+EXCLUDE)!=null){
+				  authority_exclude.addAll(authorityCache.get(group+EXCLUDE));
 				}
-			  if(authority.get(group)!=null){
-				  authority_allow.addAll(authority.get(group));
+			  if(authorityCache.get(group)!=null){
+				  authority_allow.addAll(authorityCache.get(group));
 			  }
 		 }
 		return  permissionCheck(url, authority_exclude, authority_allow);
@@ -156,11 +156,11 @@ public static Boolean check(Collection<String> groups,String url){
 	Collection<String> authority_allow=new ArrayList<String>();
 	if(groups!=null&&url!=null){
 		for (String group : groups) {
-			if(authority.get(group+EXCLUDE)!=null){
-				authority_exclude.addAll(authority.get(group+EXCLUDE));
+			if(authorityCache.get(group+EXCLUDE)!=null){
+				authority_exclude.addAll(authorityCache.get(group+EXCLUDE));
 			}
-			if(authority.get(group)!=null){
-				authority_allow.addAll(authority.get(group));
+			if(authorityCache.get(group)!=null){
+				authority_allow.addAll(authorityCache.get(group));
 			}
 		}
 		return  permissionCheck(url, authority_exclude, authority_allow);
@@ -178,11 +178,11 @@ public static Boolean check(String group,String url){
 	Collection<String> authority_exclude=new ArrayList<String>();
 	Collection<String> authority_allow=new ArrayList<String>();
 	if(group!=null&&url!=null){
-	      if(authority.get(group+EXCLUDE)!=null){
-				authority_exclude.addAll(authority.get(group+EXCLUDE));
+	      if(authorityCache.get(group+EXCLUDE)!=null){
+				authority_exclude.addAll(authorityCache.get(group+EXCLUDE));
 			}
-			if(authority.get(group)!=null){
-				authority_allow.addAll(authority.get(group));
+			if(authorityCache.get(group)!=null){
+				authority_allow.addAll(authorityCache.get(group));
 			}
 			return  permissionCheck(url, authority_exclude, authority_allow);
 	}
@@ -253,12 +253,12 @@ public static void addAuthorityFromMapColection(Map<String, ? extends Collection
 	if(authenGroups!=null){
 		for (String  group : authenGroups.keySet()) {
 			if(group!=null&&authenGroups.get(group)!=null){
-				if(authority.get(group)!=null){
-					 Collection<String> resources=authority.get(group);
+				if(authorityCache.get(group)!=null){
+					 Collection<String> resources=authorityCache.get(group);
 					 resources.addAll(formatResources(authenGroups.get(group)));
-					 authority.put(group, resources);
+					 authorityCache.put(group, resources);
 				}else{
-					 authority.put(group,formatResources(authenGroups.get(group)));
+					authorityCache.put(group,formatResources(authenGroups.get(group)));
 				}
 			}
 		}
@@ -275,12 +275,12 @@ public static void addAuthorityFromMapColection(Map<String, ? extends Collection
  */
 public static void addAuthorityFromCollection( String group, Collection<String> resources) {
 		 if(group!=null&&resources!=null){
-			 if(authority.get(group)!=null){
-				 Collection<String> _resources=authority.get(group);
+			 if(authorityCache.get(group)!=null){
+				 Collection<String> _resources=authorityCache.get(group);
 				 _resources.addAll(formatResources(resources));
-				 authority.put(group, _resources);
+				 authorityCache.put(group, _resources);
 			}else{
-				authority.put(group, formatResources(resources));
+				authorityCache.put(group, formatResources(resources));
 			}
 		 }
 }
@@ -349,7 +349,7 @@ public static void addAuthorityFromFile(File file) throws IOException{
  */
 	public static void removeBygroup(String group) {
 		if(CommonUtils.isNotEmpty(group)){
-		   authority.remove(group);
+			authorityCache.remove(group);
 		}
 	}
 	/**
@@ -360,7 +360,7 @@ public static void addAuthorityFromFile(File file) throws IOException{
 	 */
 	public static void removeBygroups(String[] groups) {
 		for (String group : groups) {
-			authority.remove(group);
+			authorityCache.remove(group);
 		}
 	}
 	/**
@@ -371,7 +371,7 @@ public static void addAuthorityFromFile(File file) throws IOException{
 	 */
 	public static void removeBygroups(Collection<String> groups) {
 		for (String group : groups) {
-			authority.remove(group);
+			authorityCache.remove(group);
 		}
 	}
 	/**
@@ -380,7 +380,7 @@ public static void addAuthorityFromFile(File file) throws IOException{
 	 * @author JsonZou
 	 */
 	public static void clear() {
-		authority.clear();
+		authorityCache.clear();
 	}
 	
 	
@@ -408,7 +408,7 @@ public static void addAuthorityFromFile(File file) throws IOException{
 	 * @author JsonZou
 	 */
 	public static Map<String, Collection<String>> getAuthorityAll() {
-		 return authority;
+		 return authorityCache.all();
 	 }
 	/**
 	 * Get  the cached authorities by group.
@@ -418,7 +418,7 @@ public static void addAuthorityFromFile(File file) throws IOException{
 	 */
 	public static Collection<String> getAuthorityByGroup(String group) {
 		  if(!CommonUtils.isNotEmpty(group)){return null;}
-		  return authority.get(group);
+		  return authorityCache.get(group);
 	 }
 	/**
 	 * Get  the cached authorities by groups.
@@ -430,7 +430,7 @@ public static void addAuthorityFromFile(File file) throws IOException{
 		if(groups==null){return null;}
 		Map<String,Collection<String>> _authority=new HashMap<String,Collection<String>>();
 		for (String group : groups) {
-			_authority.put(group, authority.get(group));
+			_authority.put(group, authorityCache.get(group));
 		}
 		return _authority;
 	}
@@ -444,7 +444,7 @@ public static void addAuthorityFromFile(File file) throws IOException{
 		if(groups==null){return null;}
 		Map<String,Collection<String>> _authority=new HashMap<String,Collection<String>>();
 		for (String group : groups) {
-			_authority.put(group, authority.get(group));
+			_authority.put(group, authorityCache.get(group));
 		}
 		return _authority;
 	}
@@ -556,12 +556,12 @@ private static void addAuthority(Map<String, Collection<String>> authenGroups) {
 	if(authenGroups!=null){
 		for (String  group : authenGroups.keySet()) {
 			if(group!=null&&authenGroups.get(group)!=null){
-				if(authority.get(group)!=null){
-					 Collection<String> resources=authority.get(group);
+				if(authorityCache.get(group)!=null){
+					 Collection<String> resources=authorityCache.get(group);
 					 resources.addAll(authenGroups.get(group));
-					 authority.put(group, resources);
+					 authorityCache.put(group, resources);
 				}else{
-					authority.put(group,authenGroups.get(group));
+					authorityCache.put(group,authenGroups.get(group));
 				}
 			}
 		}
@@ -589,4 +589,57 @@ private static void readAuthority(File file) throws IOException{
 			throw new IOException("Reade the authorityFile errotr! The path is "+file.getPath());
 		}
    }
+
+
+
+
+/*************************************************authority cache****************************************************************/
+  private  static final class AuthorityCache {
+	 private final Lock lock = new ReentrantLock();
+	 private final Map<String,Collection<String>> authority=new HashMap<String,Collection<String>>();
+	public Collection<String> get(String group) {
+		Collection<String> authoritis;
+	 lock.lock();
+	 try{
+		 authoritis= this.authority.get(group);
+	 }finally{
+	  lock.unlock();
+	 }
+	 return authoritis;
+	 }
+	public void put(String group, Collection<String> authoritis) {
+	 lock.lock();
+	  try{
+	    this.authority.put(group,authoritis);
+	  }finally{
+	   lock.unlock();
+	 }
+	 }
+	public Collection<String> remove(String group) {
+		Collection<String> authoritis;
+		lock.lock();
+		try{
+			authoritis= this.authority.remove(group);
+		}finally{
+			lock.unlock();
+		}
+		return authoritis;
+	}
+	public void clear() {
+		  lock.lock();
+		try{
+			this.authority.clear();
+		}finally{
+			lock.unlock();
+		}
+	  }
+	 public  Map<String,Collection<String>> all() {
+	      return this.authority;
+	    }
+	}
+  
+  
+  
+  
+  
 }
