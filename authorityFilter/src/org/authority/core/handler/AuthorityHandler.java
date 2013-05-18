@@ -61,7 +61,7 @@ public static void readAuthority(FilterConfig _filterConfig) throws ServletExcep
 			    try {
 			    	  Log.in(AuthorityHandler.class);
 				      Log.debug("read the authorityFile "+authorityFile);
-			    	addAuthorityFromPath("classpath:"+authorityFile.trim());
+			    	addAuthorityFromPath(CLASSPATH+authorityFile.trim());
 				  } catch (IOException e) {
 					e.printStackTrace();
 					throw new IllFilterConfigException("Reade the authorityFile error!");
