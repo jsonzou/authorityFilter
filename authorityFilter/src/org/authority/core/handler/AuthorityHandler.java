@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -34,11 +35,10 @@ import org.authority.core.checker.PermissionChecker;
 public class AuthorityHandler {
    private static FilterConfig filterConfig;
    private static PermissionChecker checker;
-   private static String contextPath;
    private static  AuthorityHandler.AuthorityCache authorityCache= new AuthorityHandler.AuthorityCache();
    private static final String EXCLUDE="_exclude";
+   private static final String CLASSPATH="classpath:";
    private static final String EXTENSION=".authority";//authority file name extension
-   private static final String CLASSPATH="WEB-INF"+File.separator+"classes/";//class path
    private static final String AUTHORITYFILE="authorityFile";//authoriity file
    private static final String PERMISSIONCHECKER="permissionChecker";//permission checker
 	 
@@ -52,8 +52,6 @@ public class AuthorityHandler {
  */
 public static void readAuthority(FilterConfig _filterConfig) throws ServletException{
 	 filterConfig=_filterConfig;
-	 contextPath=filterConfig.getServletContext().getRealPath("/");
-	
 	 //get init param of authorityFile in the web.xml
 	  String authorityFile=filterConfig.getInitParameter(AUTHORITYFILE);
 	  if(CommonUtils.isNotEmpty(authorityFile)){
@@ -63,7 +61,7 @@ public static void readAuthority(FilterConfig _filterConfig) throws ServletExcep
 			    try {
 			    	  Log.in(AuthorityHandler.class);
 				      Log.debug("read the authorityFile "+authorityFile);
-			    	readAuthority(new File(contextPath+CLASSPATH+authorityFile));
+			    	addAuthorityFromPath("classpath:"+authorityFile.trim());
 				  } catch (IOException e) {
 					e.printStackTrace();
 					throw new IllFilterConfigException("Reade the authorityFile error!");
@@ -94,7 +92,7 @@ public static PermissionChecker instantiationChecker(FilterConfig filterConfig) 
 		 try {
 			  Log.in(AuthorityHandler.class);
 		      Log.debug("get the permissionChecker class "+permissionChecker);
-			Class clazz=Class.forName(permissionChecker);
+			Class clazz=Class.forName(permissionChecker.trim());
 			Object obj=clazz.newInstance();
 			if(obj instanceof PermissionChecker){
 				 checker=(PermissionChecker)obj;
@@ -320,10 +318,15 @@ public static void addAuthorityFromFriendlyJSON(String jsonResources) {
  * <p> The same group will be merged.</p>
  * @date 2013-5-4
  * @author JsonZou
- * @param path The file's name must be *.authority 
+ * @param path The file's name must be *.authority;may be you can make path like classpath:com/aa.authority or like f:/com/aa.authority
  */
-public static void addAuthorityFromFile(String path) throws IOException{
-	 readAuthority(new File(contextPath+CLASSPATH+path));
+public static void addAuthorityFromPath(String path) throws IOException{
+	if(path.trim().startsWith(CLASSPATH)){
+		path=path.trim().replace(CLASSPATH,"");
+		readAuthority(Thread.currentThread().getClass().getClassLoader().getResourceAsStream(path));
+	}else{
+		readAuthority(new File(path));
+	}
 }
 
 /**
@@ -332,10 +335,21 @@ public static void addAuthorityFromFile(String path) throws IOException{
  * <p> The same group will be merged.</p>
  * @date 2013-5-4
  * @author JsonZou
- * @param path  The file's name must be *.authority 
+ * @param file
  */
 public static void addAuthorityFromFile(File file) throws IOException{
 	  readAuthority(file);
+}
+/**
+ * Add  authorities from file to the cached authority.
+ * <p>The file's name must be *.authority</p>
+ * <p> The same group will be merged.</p>
+ * @date 2013-5-4
+ * @author JsonZou
+ * @param stream
+ */
+public static void addAuthorityFromStream(InputStream in) throws IOException{
+	readAuthority(in);
 }
 
 /*******************************remove the cached resources******************************************/
@@ -574,13 +588,8 @@ private static void readAuthority(File file) throws IOException{
 			 throw new IOException("The init param of authorityFile's extension must be [.authority] .Please rename it like *.authority .");	 
 		 }
 		 FileInputStream fin = null;
-		 BufferedInputStream bin = null;
 		 fin = new FileInputStream(file);
-		 bin = new BufferedInputStream(fin);
-		 byte[] resources_b = new byte[bin.available()];
-		 bin.read(resources_b);
-		 String jsonResources=new String(resources_b);
-		 addAuthorityFromFriendlyJSON(jsonResources);
+		 readAuthority(fin);
 	   } catch (FileNotFoundException e) {
 			 e.printStackTrace();
 			throw new FileNotFoundException("The authorityFile is not found int your system.The path is "+file.getPath());
@@ -589,6 +598,14 @@ private static void readAuthority(File file) throws IOException{
 			throw new IOException("Reade the authorityFile errotr! The path is "+file.getPath());
 		}
    }
+
+private static void readAuthority(InputStream in) throws IOException{
+		BufferedInputStream bin= new BufferedInputStream(in);
+		byte[] resources_b = new byte[bin.available()];
+		bin.read(resources_b);
+		String jsonResources=new String(resources_b);
+		addAuthorityFromFriendlyJSON(jsonResources);
+}
 
 
 
