@@ -325,7 +325,7 @@ public static void addAuthorityFromFriendlyJSON(String jsonResources) {
 public static void addAuthorityFromPath(String path) throws IOException{
 	if(path.trim().startsWith(CLASSPATH)){
 		path=path.trim().replace(CLASSPATH,"");
-		readAuthority(Thread.currentThread().getClass().getClassLoader().getResourceAsStream(path));
+		readAuthority(Thread.currentThread().getContextClassLoader().getResourceAsStream(path));
 	}else{
 		readAuthority(new File(path));
 	}
