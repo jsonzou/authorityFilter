@@ -2,7 +2,10 @@ authorityFilter
 ===============
 
 The authority filter for JAVA.Based JAVA's Filter.Check the url permission is allowed or not.
-基于java 过滤器（Filter）实现对权限控制的框架。软件由三部分组成： 
+基于java 过滤器（Filter）实现对权限控制的框架。依赖jar包：log4j.jar,fastjson.jar
+
+
+软件由三部分组成： 
 
 权限过滤器AuthorityFilter # 负责过滤url并执行权限检查器中的权限验证方法（check）.配置在web.xml中 
 
